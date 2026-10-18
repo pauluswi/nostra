@@ -1,5 +1,10 @@
 # Nostra
 
+[![Java 21+](https://img.shields.io/badge/Java-21%2B-ED8B00?logo=openjdk&logoColor=white)](https://openjdk.java.net/)
+[![Spring Boot 3.4.2](https://img.shields.io/badge/Spring%20Boot-3.4.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
+[![H2 in-memory](https://img.shields.io/badge/Database-H2%20in--memory-003545?logo=h2&logoColor=white)](https://www.h2database.com/)
+[![No Docker](https://img.shields.io/badge/Local%20run-No%20Docker-4B5563?logo=docker&logoColor=white)](https://www.docker.com/)
+
 A small, fast local banking simulator designed for quick iteration without Docker.
 
 ## Why this version is different
