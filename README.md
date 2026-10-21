@@ -4,6 +4,7 @@
 [![Spring Boot 3.4.2](https://img.shields.io/badge/Spring%20Boot-3.4.2-6DB33F?logo=springboot&logoColor=white)](https://spring.io/projects/spring-boot)
 [![H2 in-memory](https://img.shields.io/badge/Database-H2%20in--memory-003545?logo=h2&logoColor=white)](https://www.h2database.com/)
 [![No Docker](https://img.shields.io/badge/Local%20run-No%20Docker-4B5563?logo=docker&logoColor=white)](https://www.docker.com/)
+[![Maven Wrapper](https://img.shields.io/badge/Build-Maven%20Wrapper-5C5C5C?logo=apachemaven&logoColor=white)](https://maven.apache.org/)
 
 A small, fast local banking simulator designed for quick iteration without Docker.
 
@@ -13,21 +14,36 @@ This project intentionally avoids PostgreSQL in Docker for local development and
 
 The original project goal remains the same: simulate a core-banking domain with explicit account validation, transfer logic, routines, and safe financial rules.
 
-## Run locally
+## Foundation and startup
 
-Prerequisites:
-- Java 21+ (the development environment is using JDK 25-compatible toolchain)
-- Maven
+This is the first milestone in the showcase build: creating a runnable local application foundation with an explicit local-dev profile and reproducible startup path.
+
+### Prerequisites
+- Java 21+ (JDK 25 is also compatible in this environment)
+- Maven wrapper is included; no global Maven installation is required
+
+### Run locally
 
 From the repository root:
 
 ```bash
-mvn spring-boot:run
+./mvnw spring-boot:run
+```
+
+Optional environment overrides:
+
+```bash
+export APP_PROFILE=local
+export SERVER_PORT=8080
+export DB_URL='jdbc:h2:mem:nostra;MODE=PostgreSQL;DATABASE_TO_UPPER=false;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE'
+./mvnw spring-boot:run
 ```
 
 Then open:
 - http://localhost:8080/actuator/health
 - http://localhost:8080/h2-console
+
+A sample `.env.example` file is included at the repository root for local overrides.
 
 ## Seed data
 
@@ -53,3 +69,4 @@ curl -X POST http://localhost:8080/api/v1/transfers \
 - No Docker is required for the local fast path.
 - This is an in-memory development profile, not a production database choice.
 - The architecture is intentionally kept simple to maximize developer speed.
+- The app uses environment-based config so the local setup can be adjusted without editing source files.
