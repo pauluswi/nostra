@@ -49,6 +49,23 @@ A sample `.env.example` file is included at the repository root for local overri
 
 The application loads a couple of seeded accounts at startup so the transfer flow can be tested immediately.
 
+## Validation and test status
+
+The project is kept intentionally small and reviewable while still covering the critical behaviors:
+
+- `./mvnw test` exercises the Spring Boot application in the local H2 profile
+- service-level tests cover transfer validation, idempotency handling, lifecycle/audit behavior, and loan calculations
+- controller-level tests cover the HTTP contract for transfers and loans, including malformed payloads and validation failures
+- API errors follow a consistent JSON envelope so the contract stays predictable during demo and review
+
+## Project status
+
+Current scope is deliberately aligned to a fast local review flow:
+
+- default local execution is direct Spring Boot + H2, with no Docker required
+- a separate PostgreSQL profile is prepared for future parity work and production-like validation
+- the application is a simulator for FT/LD learning and review, not a native Temenos implementation
+
 ## Example API calls
 
 ```bash
