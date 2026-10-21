@@ -1,0 +1,35 @@
+### Accounts
+GET http://localhost:8080/api/v1/accounts
+
+### Health
+GET http://localhost:8080/actuator/health
+
+### Successful transfer
+POST http://localhost:8080/api/v1/transfers
+Content-Type: application/json
+
+{
+  "sourceAccountNumber": "ACC-1001",
+  "destinationAccountNumber": "ACC-1002",
+  "amount": "75.00",
+  "currency": "USD",
+  "idempotencyKey": "demo-transfer-001"
+}
+
+### Loan creation
+POST http://localhost:8080/api/v1/loans
+Content-Type: application/json
+
+{
+  "borrowerAccountNumber": "ACC-1001",
+  "principal": "1200.00",
+  "currency": "USD",
+  "annualInterestRate": "12.00",
+  "termMonths": 12
+}
+
+### Loan schedule
+GET http://localhost:8080/api/v1/loans/LN-00000000/schedule
+
+### Transfer lookup
+GET http://localhost:8080/api/v1/transfers/TRF-00000000

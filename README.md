@@ -64,9 +64,53 @@ curl -X POST http://localhost:8080/api/v1/transfers \
   }'
 ```
 
+## OpenAPI and API docs
+
+The project exposes Swagger UI for the local API profile.
+
+Open:
+- http://localhost:8080/swagger-ui/index.html
+- http://localhost:8080/v3/api-docs
+
+## Demo script
+
+A short walkthrough for a reviewer:
+
+1. Start the app with `./mvnw spring-boot:run`
+2. Check health: `curl http://localhost:8080/actuator/health`
+3. List accounts: `curl http://localhost:8080/api/v1/accounts`
+4. Submit a transfer:
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/transfers \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "sourceAccountNumber": "ACC-1001",
+       "destinationAccountNumber": "ACC-1002",
+       "amount": "75.00",
+       "currency": "USD",
+       "idempotencyKey": "demo-transfer-001"
+     }'
+   ```
+5. Re-submit the same idempotency key to confirm duplicate protection
+6. Create a loan:
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/loans \
+     -H 'Content-Type: application/json' \
+     -d '{
+       "borrowerAccountNumber": "ACC-1001",
+       "principal": "1200.00",
+       "currency": "USD",
+       "annualInterestRate": "12.00",
+       "termMonths": 12
+     }'
+   ```
+7. View the generated schedule: `curl http://localhost:8080/api/v1/loans/{loanReference}/schedule`
+8. Inspect transfer audit: `curl http://localhost:8080/api/v1/transfers/{reference}/audit`
+
 ## Notes
 
 - No Docker is required for the local fast path.
 - This is an in-memory development profile, not a production database choice.
 - The architecture is intentionally kept simple to maximize developer speed.
 - The app uses environment-based config so the local setup can be adjusted without editing source files.
+- The project is a simulator and intentionally not a native Temenos runtime.
