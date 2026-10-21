@@ -19,13 +19,16 @@ public class AccountService {
     private final TransferRules transferRules;
     private final TransferRepository transferRepository;
     private final TransferPostingRepository transferPostingRepository;
+    private final TransferAuditRepository transferAuditRepository;
 
     public AccountService(AccountRepository accountRepository, TransferRules transferRules,
-                          TransferRepository transferRepository, TransferPostingRepository transferPostingRepository) {
+                          TransferRepository transferRepository, TransferPostingRepository transferPostingRepository,
+                          TransferAuditRepository transferAuditRepository) {
         this.accountRepository = accountRepository;
         this.transferRules = transferRules;
         this.transferRepository = transferRepository;
         this.transferPostingRepository = transferPostingRepository;
+        this.transferAuditRepository = transferAuditRepository;
     }
 
     public List<AccountDto> listAccounts() {
@@ -59,46 +62,70 @@ public class AccountService {
         TransferRecord existing = transferRepository.findByIdempotencyKey(request.idempotencyKey()).orElse(null);
         if (existing != null) {
             if (!existing.getPayloadHash().equals(payloadHash)) {
+                String reference = existing.getReference();
+                recordAudit(reference, "IDEMPOTENCY_CONFLICT", "REJECTED", "Idempotency key already used with different payload");
                 throw new BusinessRuleException(
                     "IDEMPOTENCY_KEY_CONFLICT",
                     "Idempotency key already used with different payload"
                 );
             }
+            recordAudit(existing.getReference(), "DUPLICATE_REQUEST", existing.getStatus().name(), "Returned original transfer response");
             return toResponse(existing);
         }
-
-        Account source = accountRepository.findByAccountNumberForUpdate(request.sourceAccountNumber())
-            .orElseThrow(() -> new BusinessRuleException("ACCOUNT_NOT_FOUND", "Source account not found: " + request.sourceAccountNumber()));
-        Account destination = accountRepository.findByAccountNumberForUpdate(request.destinationAccountNumber())
-            .orElseThrow(() -> new BusinessRuleException("ACCOUNT_NOT_FOUND", "Destination account not found: " + request.destinationAccountNumber()));
-
-        transferRules.validate(source, destination, request.amount(), request.currency());
 
         String reference = "TRF-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         TransferRecord transfer = new TransferRecord(
             reference,
             request.idempotencyKey(),
-            source.getAccountNumber(),
-            destination.getAccountNumber(),
+            request.sourceAccountNumber(),
+            request.destinationAccountNumber(),
             request.amount(),
             request.currency(),
             payloadHash,
-            TransferStatus.VALIDATED
+            TransferStatus.RECEIVED
         );
-
-        source.debit(request.amount());
-        destination.credit(request.amount());
         transfer = transferRepository.save(transfer);
+        recordAudit(reference, "RECEIVED", transfer.getStatus().name(), "Transfer accepted for processing");
 
-        transferPostingRepository.save(new TransferPosting(reference, source.getAccountNumber(), "DEBIT", request.amount(), request.currency()));
-        transferPostingRepository.save(new TransferPosting(reference, destination.getAccountNumber(), "CREDIT", request.amount(), request.currency()));
-        accountRepository.save(source);
-        accountRepository.save(destination);
+        Account source = accountRepository.findByAccountNumberForUpdate(request.sourceAccountNumber()).orElse(null);
+        if (source == null) {
+            transfer.setStatus(TransferStatus.REJECTED);
+            transferRepository.save(transfer);
+            recordAudit(reference, "VALIDATION_FAILED", "REJECTED", "Source account not found: " + request.sourceAccountNumber());
+            throw new BusinessRuleException("ACCOUNT_NOT_FOUND", "Source account not found: " + request.sourceAccountNumber());
+        }
 
-        transfer.setStatus(TransferStatus.COMPLETED);
-        transfer = transferRepository.save(transfer);
+        Account destination = accountRepository.findByAccountNumberForUpdate(request.destinationAccountNumber()).orElse(null);
+        if (destination == null) {
+            transfer.setStatus(TransferStatus.REJECTED);
+            transferRepository.save(transfer);
+            recordAudit(reference, "VALIDATION_FAILED", "REJECTED", "Destination account not found: " + request.destinationAccountNumber());
+            throw new BusinessRuleException("ACCOUNT_NOT_FOUND", "Destination account not found: " + request.destinationAccountNumber());
+        }
 
-        return toResponse(transfer);
+        try {
+            transferRules.validate(source, destination, request.amount(), request.currency());
+            transfer.setStatus(TransferStatus.VALIDATED);
+            transferRepository.save(transfer);
+            recordAudit(reference, "VALIDATED", transfer.getStatus().name(), "Transfer passed business validation");
+
+            source.debit(request.amount());
+            destination.credit(request.amount());
+            transferPostingRepository.save(new TransferPosting(reference, source.getAccountNumber(), "DEBIT", request.amount(), request.currency()));
+            transferPostingRepository.save(new TransferPosting(reference, destination.getAccountNumber(), "CREDIT", request.amount(), request.currency()));
+            accountRepository.save(source);
+            accountRepository.save(destination);
+
+            transfer.setStatus(TransferStatus.COMPLETED);
+            transfer = transferRepository.save(transfer);
+            recordAudit(reference, "COMPLETED", transfer.getStatus().name(), "Transfer posted successfully");
+            return toResponse(transfer);
+        } catch (BusinessRuleException ex) {
+            transfer.setStatus(TransferStatus.REJECTED);
+            transferRepository.save(transfer);
+            recordAudit(reference, "REJECTED", "REJECTED", ex.getMessage());
+            throw ex;
+        }
     }
 
     public TransferResponse getTransfer(String reference) {
@@ -107,7 +134,26 @@ public class AccountService {
         return toResponse(transfer);
     }
 
+    public List<TransferAuditDto> getTransferAudit(String reference) {
+        transferRepository.findByReference(reference)
+            .orElseThrow(() -> new BusinessRuleException("TRANSFER_NOT_FOUND", "Transfer not found: " + reference));
+        return transferAuditRepository.findByTransferReferenceOrderByCreatedAtAsc(reference).stream()
+            .map(entry -> new TransferAuditDto(
+                entry.getTransferReference(),
+                entry.getActionName(),
+                entry.getOutcome(),
+                entry.getMessage(),
+                entry.getCorrelationId(),
+                entry.getCreatedAt()))
+            .collect(Collectors.toList());
+    }
+
     private TransferResponse toResponse(TransferRecord transfer) {
+        String message = switch (transfer.getStatus()) {
+            case COMPLETED -> "Transfer successful";
+            case REJECTED -> "Transfer rejected";
+            default -> "Transfer processed";
+        };
         return new TransferResponse(
             transfer.getReference(),
             transfer.getStatus().name(),
@@ -115,8 +161,18 @@ public class AccountService {
             transfer.getDestinationAccountNumber(),
             transfer.getAmount(),
             transfer.getCurrency(),
-            "Transfer successful"
+            message
         );
+    }
+
+    private void recordAudit(String transferReference, String actionName, String outcome, String message) {
+        transferAuditRepository.save(new TransferAuditEntry(
+            transferReference,
+            actionName,
+            outcome,
+            message,
+            UUID.randomUUID().toString()
+        ));
     }
 
     private String hashPayload(TransferRequest request) {

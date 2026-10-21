@@ -40,4 +40,9 @@ public class AccountController {
     public TransferResponse getTransfer(@PathVariable String reference) {
         return accountService.getTransfer(reference);
     }
+
+    @GetMapping("/transfers/{reference}/audit")
+    public java.util.List<TransferAuditDto> getTransferAudit(@PathVariable String reference) {
+        return accountService.getTransferAudit(reference);
+    }
 }

@@ -59,6 +59,23 @@ class AccountServiceTest {
     }
 
     @Test
+    void transfer_shouldCreateLifecycleAuditTrail() {
+        TransferResponse response = accountService.transfer(new TransferRequest(
+            "ACC-T1",
+            "ACC-T2",
+            new BigDecimal("25.00"),
+            "USD",
+            "key-audit"
+        ));
+
+        assertThat(response.status()).isEqualTo("COMPLETED");
+        assertThat(accountService.getTransferAudit(response.reference())).isNotEmpty();
+        assertThat(accountService.getTransferAudit(response.reference()).stream()
+            .map(TransferAuditDto::outcome))
+            .contains("RECEIVED", "VALIDATED", "COMPLETED");
+    }
+
+    @Test
     void transfer_shouldRejectWhenCurrencyDoesNotMatch() {
         assertThatThrownBy(() -> accountService.transfer(new TransferRequest(
             "ACC-T1",
