@@ -35,4 +35,9 @@ public class AccountController {
     public ResponseEntity<TransferResponse> transfer(@Valid @RequestBody TransferRequest request) {
         return ResponseEntity.status(HttpStatus.OK).body(accountService.transfer(request));
     }
+
+    @GetMapping("/transfers/{reference}")
+    public TransferResponse getTransfer(@PathVariable String reference) {
+        return accountService.getTransfer(reference);
+    }
 }

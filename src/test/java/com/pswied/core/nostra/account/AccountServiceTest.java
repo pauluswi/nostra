@@ -35,11 +35,27 @@ class AccountServiceTest {
             "key-1"
         ));
 
-        assertThat(response.status()).isEqualTo("SUCCESS");
+        assertThat(response.reference()).startsWith("TRF-");
+        assertThat(response.status()).isEqualTo("COMPLETED");
         assertThat(accountRepository.findByAccountNumber("ACC-T1").orElseThrow().getBalance())
             .isEqualByComparingTo("924.50");
         assertThat(accountRepository.findByAccountNumber("ACC-T2").orElseThrow().getBalance())
             .isEqualByComparingTo("575.50");
+    }
+
+    @Test
+    void transfer_shouldRejectDuplicateIdempotencyKeyWithDifferentPayload() {
+        accountService.transfer(new TransferRequest("ACC-T1", "ACC-T2", new BigDecimal("50.00"), "USD", "key-dup"));
+
+        assertThatThrownBy(() -> accountService.transfer(new TransferRequest(
+            "ACC-T1",
+            "ACC-T2",
+            new BigDecimal("60.00"),
+            "USD",
+            "key-dup"
+        )))
+            .isInstanceOf(RuntimeException.class)
+            .hasMessageContaining("different payload");
     }
 
     @Test
