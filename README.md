@@ -64,6 +64,43 @@ curl -X POST http://localhost:8080/api/v1/transfers \
   }'
 ```
 
+## Validation and error codes
+
+The API uses a consistent JSON error envelope for validation and business-rule rejections. The payload follows this pattern:
+
+```json
+{
+  "timestamp": "2026-10-21T15:35:00Z",
+  "status": 400,
+  "error": "VALIDATION_ERROR",
+  "code": "VALIDATION_ERROR",
+  "message": "Transfer currency must be a 3-letter ISO code"
+}
+```
+
+Key conventions:
+- `VALIDATION_ERROR`: request body is malformed or a field fails Jakarta validation
+- `INVALID_REQUEST_BODY`: JSON cannot be deserialized into the expected DTO
+- `BUSINESS_RULE_ERROR`: domain logic rejected the operation, such as balance or status validation
+- `IDEMPOTENCY_KEY_CONFLICT`: same idempotency key reused with a different payload
+- `ACCOUNT_NOT_FOUND`, `RULE_*`, `LOAN_*`, `REPAYMENT_*`: domain-specific validation errors
+
+These values are returned by the centralized `ApiExceptionHandler` to keep the REST contract predictable.
+
+## PostgreSQL parity profile
+
+The default app profile remains the fast local path with H2 in-memory storage. A separate profile is available for later production-like parity testing:
+
+```bash
+export APP_PROFILE=postgres
+export DB_URL='jdbc:postgresql://localhost:5432/nostra'
+export DB_USERNAME=nostra
+export DB_PASSWORD=nostra
+./mvnw spring-boot:run
+```
+
+This profile is intentionally isolated and documented as a future parity path rather than the default development setup.
+
 ## OpenAPI and API docs
 
 The project exposes Swagger UI for the local API profile.

@@ -5,7 +5,7 @@
 ### 1.1 Overview
 This project is a local Java 25 / Spring Boot banking simulator used to teach and demonstrate core-banking concepts in a small, testable, and auditable form. It models selected Temenos T24/T24-inspired Funds Transfer (FT) and Lending (LD) workflows without claiming to reproduce proprietary Temenos runtime behavior.
 
-The system is intentionally scoped to a modular monolith that can be run locally with PostgreSQL and Docker Compose. The goal is to demonstrate:
+The system is intentionally scoped to a modular monolith that runs locally without Docker, using an in-memory H2 database for fast iteration. The goal is to demonstrate:
 
 - routine-style processing
 - business-rule validation
@@ -17,7 +17,7 @@ The system is intentionally scoped to a modular monolith that can be run locally
 - application observability and local development ergonomics
 
 ### 1.2 Business and technical goals
-- Provide a reproducible local developer setup
+- Provide a fast, reproducible local developer setup with no Docker dependency
 - Demonstrate a small but realistic core-banking domain model
 - Guarantee financial invariants with explicit validation and transactional integrity
 - Keep the project understandable for review and education
@@ -32,9 +32,9 @@ The system is intentionally scoped to a modular monolith that can be run locally
 ### 1.4 Constraints
 - Java 25
 - Spring Boot compatible with Java 25
-- PostgreSQL as authoritative store
-- Docker Compose for local orchestration
-- Maven build with versioned migrations
+- H2 in-memory database for the default local fast path
+- No Docker requirement for local development and review
+- Maven Wrapper for deterministic startup
 - Simulated business logic only; no real Temenos environment required
 
 ---
@@ -45,7 +45,7 @@ The first release is intentionally a modular monolith. The architecture avoids d
 
 Key constraints:
 
-- Single PostgreSQL database for the initial release
+- H2 in-memory database for the default local startup profile
 - Domain logic separated from HTTP and persistence concerns where practical
 - No reliance on Kafka or other messaging infrastructure for FT/LD correctness
 - Monetary values represented with exact decimal semantics (BigDecimal)
@@ -61,9 +61,9 @@ The system is a self-contained application that exposes REST endpoints for accou
 
 It interacts with:
 
-- PostgreSQL for account, transfer, posting, audit, and loan records
-- Docker Compose-managed local services for developer environment
+- H2 in-memory storage for account, transfer, posting, audit, and loan records in the default local provider
 - External clients via REST/JSON APIs
+- Optional future database or environment profiles if the project evolves beyond the local showcase scope
 
 ### 3.2 Scope
 In scope for the first milestone:
@@ -105,8 +105,8 @@ The architecture follows a layered, domain-centered approach:
    - Routine dispatch and business rejection handling
 
 3. Persistence layer
-   - Spring Data JPA or JDBC-backed repositories
-   - Flyway migrations for schema evolution
+   - Spring Data JPA repositories
+   - H2 in-memory data storage for the default local profile
    - Database constraints for uniqueness and referential integrity
 
 4. API layer
@@ -117,7 +117,7 @@ The architecture follows a layered, domain-centered approach:
 5. Operations layer
    - Health endpoint
    - Structured logs and correlation identifiers
-   - Docker Compose startup and PostgreSQL health checks
+   - Local startup validation without container orchestration
 
 This strategy prioritizes correctness, clarity, and testability over breadth of features.
 
@@ -158,8 +158,8 @@ This strategy prioritizes correctness, clarity, and testability over breadth of 
               v
 +---------------------------+
 | Persistence Layer          |
-| JPA/JDBC + PostgreSQL      |
-| Flyway migrations         |
+| JPA repositories + H2     |
+| in-memory local state      |
 +---------------------------+
 ```
 
@@ -238,34 +238,35 @@ API -> Client: transfer result + status
 
 ```text
 +------------------+
-| Docker Compose   |
-| - PostgreSQL     |
-| - App container  |
+| Local developer  |
+| - Java/JDK       |
+| - Spring Boot    |
+| - Maven Wrapper  |
 +---------+--------+
           |
           v
 +------------------+
 | Java app         |
 | Spring Boot      |
-| port: app port   |
+| port: 8080       |
 +---------+--------+
           |
           v
 +------------------+
-| PostgreSQL       |
-| schema + tables  |
+| H2 in-memory DB  |
+| local fast path  |
 +------------------+
 ```
 
 ### 7.2 Environment configuration
-The application must be configured using environment variables and/or Spring config. Example concerns include:
+The application is configured using environment variables and/or Spring config. Example concerns include:
 
-- database host, port, database name, credentials
-- application port and profiles
+- application profile and port
+- database URL and runtime settings
 - feature toggles and rule configuration
 - any local demo or seed configuration
 
-The project must avoid committing secrets and must fail clearly when required configuration is missing or invalid.
+The project avoids committing secrets and fails clearly when required configuration is missing or invalid.
 
 ---
 
@@ -320,13 +321,14 @@ Reason:
 - easier to reason about transaction boundaries
 - faster to implement in an educational simulator
 
-### ADR-02: PostgreSQL as the source of truth
-The database holds accounts, transfers, postings, audit records, and later loan tables.
+### ADR-02: H2 in-memory database for the local fast path
+The default development profile uses a lightweight in-memory H2 database so the application can start quickly and be reviewed locally without Docker.
 
 Reason:
-- atomicity and transactional integrity
-- consistent persistence across restarts
-- compatibility with Flyway-managed schema evolution
+- atomicity and transactional integrity within the local runtime
+- fast startup for demos and tests
+- reduced setup friction for the educational showcase
+- explicit separation from production-grade database assumptions
 
 ### ADR-03: Explicit financial ledger model
 Use an immutable posting structure or equivalent explicit posting table with references to business transactions.
@@ -336,12 +338,13 @@ Reason:
 - supports tracing and auditability
 - keeps the system simple and inspectable
 
-### ADR-04: Row-level locking for concurrent balance updates
-Prefer deterministic locking on affected account rows during a transfer, then test concurrency through PostgreSQL-backed integration tests.
+### ADR-04: Explicit transactional validation for concurrent balance updates
+Prefer deterministic validation and ordered updates while processing a transfer, then test concurrency in the local in-memory profile to keep the simulator predictable and reviewable.
 
 Reason:
-- prevents check-then-update races
+- prevents check-then-update races in the simulated workflow
 - keeps behavior explicit for the educational project
+- avoids unnecessary infrastructure complexity in the fast local path
 
 ### ADR-05: YAML-based rule configuration for milestone 1
 Use a small, explicit configuration format for business rules.
@@ -424,4 +427,4 @@ These risks are mitigated by keeping the first release focused, versioned, and t
 
 ## 13. Summary
 
-This architecture is intentionally simple, explicit, and review-friendly. It prioritizes correctness and financial integrity over broad imitation of a proprietary banking platform. The project aims to provide a clean, local Java/Spring/PostgreSQL implementation of key core-banking concepts with strong tests, deterministic behavior, and clear documentation.
+This architecture is intentionally simple, explicit, and review-friendly. It prioritizes correctness and financial integrity over broad imitation of a proprietary banking platform. The project aims to provide a clean, local Java/Spring/H2 implementation of key core-banking concepts with strong tests, deterministic behavior, and clear documentation.
