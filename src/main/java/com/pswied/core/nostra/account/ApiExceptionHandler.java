@@ -1,5 +1,6 @@
 package com.pswied.core.nostra.account;
 
+import com.pswied.core.nostra.rules.BusinessRuleException;
 import java.time.Instant;
 import java.util.Map;
 import org.springframework.http.HttpStatus;
@@ -21,6 +22,17 @@ public class ApiExceptionHandler {
             "status", 400,
             "error", "VALIDATION_ERROR",
             "message", message
+        ));
+    }
+
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<Map<String, Object>> handleBusinessRule(BusinessRuleException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of(
+            "timestamp", Instant.now().toString(),
+            "status", 400,
+            "error", "BUSINESS_RULE_ERROR",
+            "code", ex.getCode(),
+            "message", ex.getMessage()
         ));
     }
 

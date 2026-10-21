@@ -1,9 +1,10 @@
 package com.pswied.core.nostra.account;
 
+import com.pswied.core.nostra.rules.BusinessRuleException;
+import com.pswied.core.nostra.rules.TransferRules;
 import jakarta.transaction.Transactional;
 import java.math.BigDecimal;
 import java.util.List;
-import java.util.UUID;
 import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
@@ -11,9 +12,11 @@ import org.springframework.stereotype.Service;
 public class AccountService {
 
     private final AccountRepository accountRepository;
+    private final TransferRules transferRules;
 
-    public AccountService(AccountRepository accountRepository) {
+    public AccountService(AccountRepository accountRepository, TransferRules transferRules) {
         this.accountRepository = accountRepository;
+        this.transferRules = transferRules;
     }
 
     public List<AccountDto> listAccounts() {
@@ -44,25 +47,11 @@ public class AccountService {
     @Transactional
     public TransferResponse transfer(TransferRequest request) {
         Account source = accountRepository.findByAccountNumberForUpdate(request.sourceAccountNumber())
-            .orElseThrow(() -> new IllegalArgumentException("Source account not found: " + request.sourceAccountNumber()));
+            .orElseThrow(() -> new BusinessRuleException("ACCOUNT_NOT_FOUND", "Source account not found: " + request.sourceAccountNumber()));
         Account destination = accountRepository.findByAccountNumberForUpdate(request.destinationAccountNumber())
-            .orElseThrow(() -> new IllegalArgumentException("Destination account not found: " + request.destinationAccountNumber()));
+            .orElseThrow(() -> new BusinessRuleException("ACCOUNT_NOT_FOUND", "Destination account not found: " + request.destinationAccountNumber()));
 
-        if (request.amount().compareTo(BigDecimal.ZERO) <= 0) {
-            throw new IllegalArgumentException("Transfer amount must be positive");
-        }
-        if (!source.getCurrency().equals(request.currency()) || !destination.getCurrency().equals(request.currency())) {
-            throw new IllegalArgumentException("Transfer currency mismatch");
-        }
-        if (source.getStatus() != AccountStatus.ACTIVE || destination.getStatus() != AccountStatus.ACTIVE) {
-            throw new IllegalArgumentException("Only active accounts can transfer");
-        }
-        if (source.getAccountNumber().equals(destination.getAccountNumber())) {
-            throw new IllegalArgumentException("Source and destination account cannot be the same");
-        }
-        if (source.getBalance().compareTo(request.amount()) < 0) {
-            throw new IllegalArgumentException("Insufficient funds");
-        }
+        transferRules.validate(source, destination, request.amount(), request.currency());
 
         source.debit(request.amount());
         destination.credit(request.amount());

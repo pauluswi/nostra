@@ -51,7 +51,7 @@ class AccountServiceTest {
             "EUR",
             "key-2"
         )))
-            .isInstanceOf(IllegalArgumentException.class)
+            .isInstanceOf(RuntimeException.class)
             .hasMessageContaining("currency");
     }
 }
