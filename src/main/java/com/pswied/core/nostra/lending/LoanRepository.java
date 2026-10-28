@@ -7,4 +7,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface LoanRepository extends JpaRepository<Loan, UUID> {
 
     Optional<Loan> findByLoanReference(String loanReference);
+
+    long countByStatus(LoanStatus status);
 }

@@ -9,4 +9,6 @@ public interface TransferRepository extends JpaRepository<TransferRecord, UUID> 
     Optional<TransferRecord> findByIdempotencyKey(String idempotencyKey);
 
     Optional<TransferRecord> findByReference(String reference);
+
+    long countByStatus(TransferStatus status);
 }
