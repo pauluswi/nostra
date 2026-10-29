@@ -137,7 +137,7 @@ export DB_PASSWORD=nostra
 ./mvnw spring-boot:run
 ```
 
-This profile is intentionally isolated and documented as a future parity path rather than the default development setup.
+This profile is intentionally isolated and documented as a future parity path rather than the default development setup. The local PostgreSQL bootstrap is intentionally conservative: Flyway is disabled by default because Boot can hit a circular JPA/Flyway bootstrap issue when the profile is started before a specific PostgreSQL runtime is installed and validated. Once the target PostgreSQL instance is available, the profile can be switched to a stricter migration flow.
 
 ## OpenAPI and API docs
 
