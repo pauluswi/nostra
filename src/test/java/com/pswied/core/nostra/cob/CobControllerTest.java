@@ -69,6 +69,26 @@ class CobControllerTest {
             "hash-2",
             TransferStatus.REJECTED
         ));
+        transferRepository.save(new TransferRecord(
+            "TRF-003",
+            "idempotent-3",
+            "ACC-COB-2",
+            "ACC-COB-1",
+            new BigDecimal("25.00"),
+            "USD",
+            "hash-3",
+            TransferStatus.RECEIVED
+        ));
+        transferRepository.save(new TransferRecord(
+            "TRF-004",
+            "idempotent-4",
+            "ACC-COB-1",
+            "ACC-COB-2",
+            new BigDecimal("80.00"),
+            "USD",
+            "hash-4",
+            TransferStatus.VALIDATED
+        ));
 
         loanRepository.save(new Loan(
             "LN-COB-1",
@@ -81,6 +101,17 @@ class CobControllerTest {
             new BigDecimal("900.00"),
             LoanStatus.ACTIVE
         ));
+        loanRepository.save(new Loan(
+            "LN-COB-2",
+            "ACC-COB-2",
+            new BigDecimal("500.00"),
+            "USD",
+            new BigDecimal("12.00"),
+            3,
+            new BigDecimal("170.00"),
+            new BigDecimal("120.00"),
+            LoanStatus.OVERDUE
+        ));
     }
 
     @Test
@@ -91,7 +122,9 @@ class CobControllerTest {
             .andExpect(jsonPath("$.accountCount").value(2))
             .andExpect(jsonPath("$.completedTransferCount").value(1))
             .andExpect(jsonPath("$.rejectedTransferCount").value(1))
-            .andExpect(jsonPath("$.activeLoanCount").value(1));
+            .andExpect(jsonPath("$.activeLoanCount").value(1))
+            .andExpect(jsonPath("$.pendingTransferCount").value(2))
+            .andExpect(jsonPath("$.overdueLoanCount").value(1));
     }
 
     @Test
@@ -102,6 +135,8 @@ class CobControllerTest {
         mockMvc.perform(get("/api/v1/cob/latest"))
             .andExpect(status().isOk())
             .andExpect(jsonPath("$.status").value("COMPLETED"))
-            .andExpect(jsonPath("$.summaryMessage").value("Daily close processed for local simulator"));
+            .andExpect(jsonPath("$.summaryMessage").value(
+                "Daily close processed for local simulator: 1 completed transfers, 1 rejected transfers, 2 pending transfers, 1 overdue loans."
+            ));
     }
 }

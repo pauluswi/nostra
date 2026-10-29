@@ -38,6 +38,12 @@ public class CobRun {
     @Column(name = "active_loan_count", nullable = false)
     private long activeLoanCount;
 
+    @Column(name = "pending_transfer_count", nullable = false)
+    private long pendingTransferCount;
+
+    @Column(name = "overdue_loan_count", nullable = false)
+    private long overdueLoanCount;
+
     @Column(name = "started_at", nullable = false)
     private Instant startedAt;
 
@@ -52,13 +58,16 @@ public class CobRun {
 
     public CobRun(String runReference, CobStatus status, long accountCount,
                   long completedTransferCount, long rejectedTransferCount,
-                  long activeLoanCount, String summaryMessage) {
+                  long activeLoanCount, long pendingTransferCount,
+                  long overdueLoanCount, String summaryMessage) {
         this.runReference = runReference;
         this.status = status;
         this.accountCount = accountCount;
         this.completedTransferCount = completedTransferCount;
         this.rejectedTransferCount = rejectedTransferCount;
         this.activeLoanCount = activeLoanCount;
+        this.pendingTransferCount = pendingTransferCount;
+        this.overdueLoanCount = overdueLoanCount;
         this.startedAt = Instant.now();
         this.finishedAt = Instant.now();
         this.summaryMessage = summaryMessage;
@@ -90,6 +99,14 @@ public class CobRun {
 
     public long getActiveLoanCount() {
         return activeLoanCount;
+    }
+
+    public long getPendingTransferCount() {
+        return pendingTransferCount;
+    }
+
+    public long getOverdueLoanCount() {
+        return overdueLoanCount;
     }
 
     public Instant getStartedAt() {

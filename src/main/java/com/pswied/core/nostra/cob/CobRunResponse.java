@@ -9,6 +9,8 @@ public record CobRunResponse(
     long completedTransferCount,
     long rejectedTransferCount,
     long activeLoanCount,
+    long pendingTransferCount,
+    long overdueLoanCount,
     Instant startedAt,
     Instant finishedAt,
     String summaryMessage

@@ -30,7 +30,18 @@ public class CobService {
         long accountCount = accountRepository.count();
         long completedTransferCount = transferRepository.countByStatus(TransferStatus.COMPLETED);
         long rejectedTransferCount = transferRepository.countByStatus(TransferStatus.REJECTED);
+        long pendingTransferCount = transferRepository.countByStatus(TransferStatus.RECEIVED)
+            + transferRepository.countByStatus(TransferStatus.VALIDATED);
         long activeLoanCount = loanRepository.countByStatus(LoanStatus.ACTIVE);
+        long overdueLoanCount = loanRepository.countByStatus(LoanStatus.OVERDUE);
+
+        String summaryMessage = String.format(
+            "Daily close processed for local simulator: %d completed transfers, %d rejected transfers, %d pending transfers, %d overdue loans.",
+            completedTransferCount,
+            rejectedTransferCount,
+            pendingTransferCount,
+            overdueLoanCount
+        );
 
         String runReference = "COB-" + UUID.randomUUID().toString().substring(0, 8).toUpperCase();
         CobRun run = new CobRun(
@@ -40,7 +51,9 @@ public class CobService {
             completedTransferCount,
             rejectedTransferCount,
             activeLoanCount,
-            "Daily close processed for local simulator"
+            pendingTransferCount,
+            overdueLoanCount,
+            summaryMessage
         );
 
         run = cobRunRepository.save(run);
@@ -61,6 +74,8 @@ public class CobService {
             run.getCompletedTransferCount(),
             run.getRejectedTransferCount(),
             run.getActiveLoanCount(),
+            run.getPendingTransferCount(),
+            run.getOverdueLoanCount(),
             run.getStartedAt(),
             run.getFinishedAt(),
             run.getSummaryMessage()
