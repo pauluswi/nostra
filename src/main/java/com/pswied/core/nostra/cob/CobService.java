@@ -1,10 +1,14 @@
 package com.pswied.core.nostra.cob;
 
 import com.pswied.core.nostra.account.AccountRepository;
+import com.pswied.core.nostra.account.TransferRecord;
 import com.pswied.core.nostra.account.TransferRepository;
 import com.pswied.core.nostra.account.TransferStatus;
+import com.pswied.core.nostra.lending.Loan;
 import com.pswied.core.nostra.lending.LoanRepository;
 import com.pswied.core.nostra.lending.LoanStatus;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -75,8 +79,37 @@ public class CobService {
         return toResponse(run);
     }
 
+    public CobReportResponse getLatestCobReport() {
+        CobRun run = cobRunRepository.findFirstByOrderByStartedAtDesc()
+            .orElseThrow(() -> new IllegalStateException("No COB run has been executed yet"));
+
+        List<String> pendingTransferReferences = transferRepository.findAll().stream()
+            .filter(transfer -> transfer.getStatus() == TransferStatus.RECEIVED || transfer.getStatus() == TransferStatus.VALIDATED)
+            .map(TransferRecord::getReference)
+            .sorted()
+            .toList();
+
+        List<String> overdueLoanReferences = loanRepository.findAll().stream()
+            .filter(loan -> loan.getStatus() == LoanStatus.OVERDUE)
+            .map(Loan::getLoanReference)
+            .sorted()
+            .toList();
+
+        return new CobReportResponse(
+            run.getRunReference(),
+            run.getSummaryMessage(),
+            parseStages(run.getProcessingStages()),
+            run.getPendingTransferCount(),
+            run.getRejectedTransferCount(),
+            run.getOverdueLoanCount(),
+            pendingTransferReferences,
+            overdueLoanReferences,
+            Instant.now()
+        );
+    }
+
     private CobRunResponse toResponse(CobRun run) {
-        List<String> processingStages = List.of(run.getProcessingStages().split("\\|"));
+        List<String> processingStages = parseStages(run.getProcessingStages());
         return new CobRunResponse(
             run.getRunReference(),
             run.getStatus(),
@@ -91,5 +124,12 @@ public class CobService {
             run.getFinishedAt(),
             run.getSummaryMessage()
         );
+    }
+
+    private List<String> parseStages(String processingStages) {
+        if (processingStages == null || processingStages.isBlank()) {
+            return List.of();
+        }
+        return List.of(processingStages.split("\\|", -1));
     }
 }

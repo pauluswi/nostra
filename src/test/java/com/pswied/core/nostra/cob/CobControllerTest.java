@@ -142,4 +142,20 @@ class CobControllerTest {
             ))
             .andExpect(jsonPath("$.processingStages[2]").value("EXCEPTION_REVIEW: 1 rejected transfer(s) need investigation."));
     }
+
+    @Test
+    void getLatestCobReport_shouldReturnDetailedDailySummary() throws Exception {
+        mockMvc.perform(post("/api/v1/cob/run"))
+            .andExpect(status().isCreated());
+
+        mockMvc.perform(get("/api/v1/cob/report"))
+            .andExpect(status().isOk())
+            .andExpect(jsonPath("$.summaryMessage").value(
+                "Daily close processed for local simulator: 1 completed transfers, 1 rejected transfers, 2 pending transfers, 1 overdue loans."
+            ))
+            .andExpect(jsonPath("$.pendingTransferCount").value(2))
+            .andExpect(jsonPath("$.overdueLoanCount").value(1))
+            .andExpect(jsonPath("$.pendingTransferReferences[0]").value("TRF-003"))
+            .andExpect(jsonPath("$.overdueLoanReferences[0]").value("LN-COB-2"));
+    }
 }

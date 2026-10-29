@@ -26,4 +26,9 @@ public class CobController {
     public CobRunResponse getLatestCob() {
         return cobService.getLatestCob();
     }
+
+    @GetMapping("/cob/report")
+    public CobReportResponse getLatestCobReport() {
+        return cobService.getLatestCobReport();
+    }
 }
