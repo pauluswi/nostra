@@ -256,7 +256,61 @@ Content-Type: application/json
 
 This demonstrates that the lending workflow is deterministic and reviewable in a very small contract surface.
 
-## 10. Inspect the transfer audit trail
+## 10. Run the end-of-day COB routine
+
+```bash
+curl -i -X POST http://localhost:8080/api/v1/cob/run
+```
+
+Expected response:
+
+```http
+HTTP/1.1 201 Created
+Content-Type: application/json
+
+{
+  "runReference": "COB-A1B2C3D4",
+  "status": "COMPLETED",
+  "accountCount": 2,
+  "completedTransferCount": 6,
+  "rejectedTransferCount": 2,
+  "activeLoanCount": 3,
+  "pendingTransferCount": 1,
+  "overdueLoanCount": 1,
+  "startedAt": "2026-10-29T07:00:00Z",
+  "finishedAt": "2026-10-29T07:00:00Z",
+  "summaryMessage": "Daily close processed for local simulator: 6 completed transfers, 2 rejected transfers, 1 pending transfers, 1 overdue loans."
+}
+```
+
+This is the daily-close simulation: a small, auditable summary of account volume, transfer outcomes, and lending health. It is intentionally simple and transparent, designed to support review rather than claiming full core-banking parity.
+
+## 11. Read the latest COB run
+
+```bash
+curl -i http://localhost:8080/api/v1/cob/latest
+```
+
+Expected response shape:
+
+```http
+HTTP/1.1 200 OK
+Content-Type: application/json
+
+{
+  "runReference": "COB-A1B2C3D4",
+  "status": "COMPLETED",
+  "accountCount": 2,
+  "completedTransferCount": 6,
+  "rejectedTransferCount": 2,
+  "activeLoanCount": 3,
+  "pendingTransferCount": 1,
+  "overdueLoanCount": 1,
+  "summaryMessage": "Daily close processed for local simulator: 6 completed transfers, 2 rejected transfers, 1 pending transfers, 1 overdue loans."
+}
+```
+
+## 12. Inspect the transfer audit trail
 
 ```bash
 curl -i http://localhost:8080/api/v1/transfers/{reference}/audit

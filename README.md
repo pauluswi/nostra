@@ -54,8 +54,8 @@ The application loads a couple of seeded accounts at startup so the transfer flo
 The project is kept intentionally small and reviewable while still covering the critical behaviors:
 
 - `./mvnw test` exercises the Spring Boot application in the local H2 profile
-- service-level tests cover transfer validation, idempotency handling, lifecycle/audit behavior, and loan calculations
-- controller-level tests cover the HTTP contract for transfers and loans, including malformed payloads and validation failures
+- service-level tests cover transfer validation, idempotency handling, lifecycle/audit behavior, lending calculations, and end-of-day COB summaries
+- controller-level tests cover the HTTP contract for transfers, loans, and COB execution, including malformed payloads and validation failures
 - API errors follow a consistent JSON envelope so the contract stays predictable during demo and review
 
 ## Project status
@@ -63,6 +63,7 @@ The project is kept intentionally small and reviewable while still covering the 
 Current scope is deliberately aligned to a fast local review flow:
 
 - default local execution is direct Spring Boot + H2, with no Docker required
+- the app includes a local end-of-day COB simulator for daily summary review
 - a separate PostgreSQL profile is prepared for future parity work and production-like validation
 - the application is a simulator for FT/LD learning and review, not a native Temenos implementation
 
@@ -79,6 +80,26 @@ curl -X POST http://localhost:8080/api/v1/transfers \
     "currency": "USD",
     "idempotencyKey": "transfer-001"
   }'
+curl -X POST http://localhost:8080/api/v1/cob/run
+curl http://localhost:8080/api/v1/cob/latest
+```
+
+Example COB response:
+
+```json
+{
+  "runReference": "COB-A1B2C3D4",
+  "status": "COMPLETED",
+  "accountCount": 2,
+  "completedTransferCount": 6,
+  "rejectedTransferCount": 2,
+  "activeLoanCount": 3,
+  "pendingTransferCount": 1,
+  "overdueLoanCount": 1,
+  "startedAt": "2026-10-29T07:00:00Z",
+  "finishedAt": "2026-10-29T07:00:00Z",
+  "summaryMessage": "Daily close processed for local simulator: 6 completed transfers, 2 rejected transfers, 1 pending transfers, 1 overdue loans."
+}
 ```
 
 ## Validation and error codes
@@ -160,6 +181,13 @@ A short walkthrough for a reviewer:
    ```
 7. View the generated schedule: `curl http://localhost:8080/api/v1/loans/{loanReference}/schedule`
 8. Inspect transfer audit: `curl http://localhost:8080/api/v1/transfers/{reference}/audit`
+9. Run the end-of-day COB summary:
+   ```bash
+   curl -X POST http://localhost:8080/api/v1/cob/run
+   ```
+10. Read the latest COB run: `curl http://localhost:8080/api/v1/cob/latest`
+
+The COB run summarizes daily system activity with fields such as `pendingTransferCount` and `overdueLoanCount`, making the end-of-day close easy to review in a compact API contract.
 
 ## Notes
 

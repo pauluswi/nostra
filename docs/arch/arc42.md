@@ -14,6 +14,7 @@ The system is intentionally scoped to a modular monolith that runs locally witho
 - idempotent financial operations
 - transaction lifecycle and audit trails
 - fixed-term loan calculations and repayments
+- end-of-day COB summarization for a review-friendly close process
 - application observability and local development ergonomics
 
 ### 1.2 Business and technical goals
@@ -79,6 +80,7 @@ Later scope includes:
 
 - fixed-term loan calculation and repayment workflow
 - richer observability and demo polish
+- end-of-day COB summary with pending transfer and overdue loan accounting
 - OpenAPI examples and walkthrough scripts
 
 ### 3.3 Out of scope
@@ -190,6 +192,9 @@ This strategy prioritizes correctness, clarity, and testability over breadth of 
 - lending
   - loan model, schedule generation, repayment flow, rounding policy
 
+- cob
+  - end-of-day summary run, daily counters, pending-transfer and overdue-loan review
+
 - shared
   - common values, money handling, exception types, UUID generation, currency validation
 
@@ -223,11 +228,24 @@ Application -> Persistence: Commit transaction
 API -> Client: transfer result + status
 ```
 
-### 6.3 Runtime guarantees
+### 6.3 Request flow: end-of-day COB simulation
+
+```text
+Client -> API: POST /api/v1/cob/run
+API -> Application: RunDailyCob
+Application -> Domain: Count active accounts, transfer outcomes, pending entries, overdue loans
+Application -> Persistence: Save CobRun summary and timestamps
+API -> Client: 201 Created + CobRunResponse
+```
+
+This run is intentionally lightweight and review-friendly. It creates an auditable daily summary for the simulator without claiming to reproduce a native core-banking COB engine.
+
+### 6.4 Runtime guarantees
 - A transfer is executed inside a database transaction
 - Account balance changes are only applied through controlled use cases
 - Duplicate requests with identical idempotency keys return the same logical outcome
 - Business rejections are distinct from infrastructure failures
+- Daily COB runs capture explicit counts for pending transfers and overdue loans
 - Failed database transactions leave no partial financial effects
 
 ---
