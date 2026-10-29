@@ -1,6 +1,7 @@
 package com.pswied.core.nostra.cob;
 
 import java.time.Instant;
+import java.util.List;
 
 public record CobRunResponse(
     String runReference,
@@ -11,6 +12,7 @@ public record CobRunResponse(
     long activeLoanCount,
     long pendingTransferCount,
     long overdueLoanCount,
+    List<String> processingStages,
     Instant startedAt,
     Instant finishedAt,
     String summaryMessage

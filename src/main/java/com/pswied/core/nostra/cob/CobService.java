@@ -5,6 +5,7 @@ import com.pswied.core.nostra.account.TransferRepository;
 import com.pswied.core.nostra.account.TransferStatus;
 import com.pswied.core.nostra.lending.LoanRepository;
 import com.pswied.core.nostra.lending.LoanStatus;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 
@@ -35,6 +36,13 @@ public class CobService {
         long activeLoanCount = loanRepository.countByStatus(LoanStatus.ACTIVE);
         long overdueLoanCount = loanRepository.countByStatus(LoanStatus.OVERDUE);
 
+        List<String> processingStages = List.of(
+            "PENDING_ITEMS_REVIEW: " + (pendingTransferCount + overdueLoanCount) + " item(s) require review.",
+            "SETTLEMENT_CHECK: " + completedTransferCount + " completed transfer(s) are ready for settlement.",
+            "EXCEPTION_REVIEW: " + rejectedTransferCount + " rejected transfer(s) need investigation.",
+            "DAILY_CLOSE: close summary recorded."
+        );
+
         String summaryMessage = String.format(
             "Daily close processed for local simulator: %d completed transfers, %d rejected transfers, %d pending transfers, %d overdue loans.",
             completedTransferCount,
@@ -53,7 +61,8 @@ public class CobService {
             activeLoanCount,
             pendingTransferCount,
             overdueLoanCount,
-            summaryMessage
+            summaryMessage,
+            String.join("|", processingStages)
         );
 
         run = cobRunRepository.save(run);
@@ -67,6 +76,7 @@ public class CobService {
     }
 
     private CobRunResponse toResponse(CobRun run) {
+        List<String> processingStages = List.of(run.getProcessingStages().split("\\|"));
         return new CobRunResponse(
             run.getRunReference(),
             run.getStatus(),
@@ -76,6 +86,7 @@ public class CobService {
             run.getActiveLoanCount(),
             run.getPendingTransferCount(),
             run.getOverdueLoanCount(),
+            processingStages,
             run.getStartedAt(),
             run.getFinishedAt(),
             run.getSummaryMessage()

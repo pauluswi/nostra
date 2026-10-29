@@ -53,13 +53,17 @@ public class CobRun {
     @Column(name = "summary_message", nullable = false)
     private String summaryMessage;
 
+    @Column(name = "processing_stages", nullable = false, length = 2000)
+    private String processingStages;
+
     protected CobRun() {
     }
 
     public CobRun(String runReference, CobStatus status, long accountCount,
                   long completedTransferCount, long rejectedTransferCount,
                   long activeLoanCount, long pendingTransferCount,
-                  long overdueLoanCount, String summaryMessage) {
+                  long overdueLoanCount, String summaryMessage,
+                  String processingStages) {
         this.runReference = runReference;
         this.status = status;
         this.accountCount = accountCount;
@@ -71,6 +75,7 @@ public class CobRun {
         this.startedAt = Instant.now();
         this.finishedAt = Instant.now();
         this.summaryMessage = summaryMessage;
+        this.processingStages = processingStages;
     }
 
     public UUID getId() {
@@ -119,5 +124,9 @@ public class CobRun {
 
     public String getSummaryMessage() {
         return summaryMessage;
+    }
+
+    public String getProcessingStages() {
+        return processingStages;
     }
 }

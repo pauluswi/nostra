@@ -124,7 +124,9 @@ class CobControllerTest {
             .andExpect(jsonPath("$.rejectedTransferCount").value(1))
             .andExpect(jsonPath("$.activeLoanCount").value(1))
             .andExpect(jsonPath("$.pendingTransferCount").value(2))
-            .andExpect(jsonPath("$.overdueLoanCount").value(1));
+            .andExpect(jsonPath("$.overdueLoanCount").value(1))
+            .andExpect(jsonPath("$.processingStages[0]").value("PENDING_ITEMS_REVIEW: 3 item(s) require review."))
+            .andExpect(jsonPath("$.processingStages[1]").value("SETTLEMENT_CHECK: 1 completed transfer(s) are ready for settlement."));
     }
 
     @Test
@@ -137,6 +139,7 @@ class CobControllerTest {
             .andExpect(jsonPath("$.status").value("COMPLETED"))
             .andExpect(jsonPath("$.summaryMessage").value(
                 "Daily close processed for local simulator: 1 completed transfers, 1 rejected transfers, 2 pending transfers, 1 overdue loans."
-            ));
+            ))
+            .andExpect(jsonPath("$.processingStages[2]").value("EXCEPTION_REVIEW: 1 rejected transfer(s) need investigation."));
     }
 }
