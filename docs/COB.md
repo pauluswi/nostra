@@ -86,6 +86,62 @@ flowchart TD
     K -. record .-> K1[runReference, timestamps, counters, stages]
 ```
 
+### Sequence view
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant Controller as CobController
+    participant Service as CobService
+    participant Repo as Repositories
+    participant DB as H2 / Postgres
+
+    Client->>Controller: POST /api/v1/cob/run
+    Controller->>Service: runDailyCob()
+    Service->>Repo: count accounts
+    Service->>Repo: count completed transfers
+    Service->>Repo: count rejected transfers
+    Service->>Repo: count pending transfers
+    Service->>Repo: count overdue loans
+    Repo->>DB: read aggregate counts
+    DB-->>Repo: totals
+    Repo-->>Service: metrics
+    Service->>Service: build stage list
+    Service->>Repo: save CobRun
+    Repo->>DB: insert run summary
+    DB-->>Repo: saved row
+    Repo-->>Service: CobRun
+    Service-->>Controller: CobRunResponse
+    Controller-->>Client: 201 Created
+```
+
+### Reviewer-friendly ASCII flow
+
+```text
+START COB RUN
+   |
+   v
+Load account totals
+   |
+   +--> Review pending transfers  --> count RECEIVED + VALIDATED
+   |
+   +--> Review overdue loans      --> count LoanStatus.OVERDUE
+   |
+   v
+Settlement check --> count completed transfers
+   |
+   v
+Exception review --> count rejected transfers
+   |
+   v
+Persist CobRun with timestamps and summary message
+   |
+   v
+Return COB response + daily report
+   |
+   END
+```
+
 ## API contract
 
 ### Run the COB close
